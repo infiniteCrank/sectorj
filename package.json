@@ -1,0 +1,24 @@
+{
+  "name": "sectorj",
+  "version": "1.0.0",
+  "description": "Julian Wilkison-Duran personal portfolio",
+  "keywords": [
+    "Julian",
+    "Wilkison-Duran"
+  ],
+  "homepage": "https://github.com/infiniteCrank/sectorj#readme",
+  "bugs": {
+    "url": "https://github.com/infiniteCrank/sectorj/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/infiniteCrank/sectorj.git"
+  },
+  "license": "MIT",
+  "author": "Julian Wilkison-Duran",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
