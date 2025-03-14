@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { OrbitControls } from "addons";
+import { OrbitControls, FontLoader, TextGeometry } from "addons";
 
 // Create scene, camera, and renderer
 const scene = new THREE.Scene();
@@ -16,8 +16,8 @@ function createTextTexture(text, size = 256) {
     canvas.height = size;
     const ctx = canvas.getContext("2d");
 
-    // Background
-    ctx.fillStyle = "black";
+    // Background 
+    ctx.fillStyle = "blue";
     ctx.fillRect(0, 0, size, size);
 
     // Text styling
@@ -32,10 +32,19 @@ function createTextTexture(text, size = 256) {
 
 // Create a sphere with text texture
 const texture = createTextTexture("MENU.MENU.");
-const material = new THREE.MeshStandardMaterial({ map: texture, metalness: 0.3, roughness: 0.8 });
-const geometry = new THREE.SphereGeometry(3, 32, 32);
+const material = new THREE.MeshStandardMaterial({ color: 0xc0c0c0, map: texture, metalness: 0.3, roughness: 0.8 });
+const geometry = new THREE.SphereGeometry(2, 32, 32);
 const sphere = new THREE.Mesh(geometry, material);
 scene.add(sphere);
+
+// Create a plane (hidden initially)
+const planeMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+const planeGeometry = new THREE.PlaneGeometry(3, 3);
+const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+plane.rotation.x = Math.PI / 2; // Rotate to be horizontal
+plane.position.y = -1; // Position just below the sphere
+plane.scale.set(0, 0, 0); // Start invisible
+scene.add(plane);
 
 // Add lighting
 const pointLight = new THREE.PointLight(0xffffff, 1.5, 100);
@@ -58,7 +67,7 @@ camera.position.set(0, 0, 5);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 
-// Raycaster for detecting clicks
+// Raycaster for detecting interactions
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 let isHovering = false; // Track hover state
@@ -87,20 +96,51 @@ window.addEventListener("mousemove", (event) => {
     }
 });
 
-// Handle click event
-window.addEventListener("click", (event) => {
-    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
+let menuClicked = false;
+// Handle click event with animation
+window.addEventListener("click", () => {
     raycaster.setFromCamera(mouse, camera);
     const intersects = raycaster.intersectObject(sphere);
 
     if (intersects.length > 0) {
-        sphere.scale.multiplyScalar(0.5);
+        if (!menuClicked) {
+            gsap.to(sphere.scale, { x: sphere.scale.x * 0.5, y: sphere.scale.y * 0.5, z: sphere.scale.z * 0.5, duration: 0.5, ease: "power2.out" });
+            menuClicked = true;
+
+            // Animate sphere shrinking
+            gsap.to(sphere.scale, {
+                x: 0.5, y: 0.5, z: 0.5, duration: 0.5, ease: "power2.out",
+                onComplete: () => {
+                    // Grow the plane outward
+                    gsap.to(plane.scale, {
+                        x: 1, y: 1, z: 1, duration: 0.8, ease: "power2.out",
+                        onComplete: () => {
+                            // Rotate the plane downward to face the viewer
+                            gsap.to(plane.rotation, {
+                                x: 0, duration: 1, ease: "power2.out",
+                                onComplete: () => {
+                                    // Move the plane to the right
+                                    gsap.to(plane.position, {
+                                        x: 2, duration: 1, ease: "power2.out",
+                                        onComplete: () => {
+                                            // Show the links after all animations are complete
+                                            document.getElementById("links").style.display = "block";
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                    });
+                }
+            });
+        } else {
+            gsap.to(sphere.scale, { x: sphere.scale.x / 0.5, y: sphere.scale.y / 0.5, z: sphere.scale.z / 0.5, duration: 0.5, ease: "power2.out" });
+            menuClicked = false;
+        }
     }
 });
 
-// Animation loop
+// Animation loop (adds rotation)
 function animate() {
     requestAnimationFrame(animate);
 
