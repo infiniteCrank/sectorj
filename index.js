@@ -32,18 +32,6 @@ function createTextTexture(text, size = 512, fontSize = 30, bgColor = "blue", tx
     return new THREE.CanvasTexture(canvas);
 }
 
-// Create the sphere with a text texture ("MENU")
-// const sphereTexture = createTextTexture("MENU ");
-// const sphereMaterial = new THREE.MeshStandardMaterial({
-//     color: 0xc0c0c0,
-//     map: sphereTexture,
-//     metalness: 0.3,
-//     roughness: 0.8
-// });
-// const sphereGeometry = new THREE.SphereGeometry(2, 32, 32);
-// const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-// scene.add(sphere);
-
 // Create a texture for the cube face (with "MENU" text)
 const menuTexture = createTextTexture("MENU", 300, 30, "blue", "white");
 
@@ -76,9 +64,7 @@ scene.add(plane);
 
 // --- Create Menu Items (Links) ---
 // These will be stacked vertically on the plane.
-// For each link, we create two textures:
-// • normalTexture: e.g. blue background with white text
-// • hoverTexture: swapped colors (white background, blue text)
+// For each link, we create two textures: normal and hover.
 const menuItems = ["Home", "About", "Contact"];
 const textMeshes = [];
 
@@ -97,9 +83,10 @@ menuItems.forEach((item, index) => {
     });
     const textMesh = new THREE.Mesh(textGeometry, textMaterial);
 
-    // Position the links so they stack vertically.
-    // Here, adjust the y-position so that the links are evenly spaced.
-    textMesh.position.set(2, 0.8 - index * 0.8, 0.1);
+    // Position the links so they stack vertically on top of the plane.
+    // The plane's top edge is at y = 0.5, so we position the first link there,
+    // then space them downward by 0.5 units.
+    textMesh.position.set(2, 0.05 - index * 0.8, 0.1);
 
     // Save both textures for later swapping on hover.
     textMesh.userData = {
@@ -166,7 +153,7 @@ window.addEventListener("mousemove", (event) => {
     });
 });
 
-// Handle click events: links and sphere
+// Handle click events: links and cube
 window.addEventListener("click", () => {
     raycaster.setFromCamera(mouse, camera);
 
@@ -177,16 +164,16 @@ window.addEventListener("click", () => {
         return; // Do not continue if a link was clicked.
     }
 
-    // Check if sphere is clicked
-    const sphereIntersects = raycaster.intersectObject(cube);
-    if (sphereIntersects.length > 0) {
-        animateSphereAndMenu();
-    }
 });
 
-// Animate sphere shrinking and then animate plane to appear.
+// Handle click events: links and cube
+window.addEventListener("load", () => {
+    animateCubeAndMenu();
+})
+
+// Animate cube shrinking and then animate plane to appear.
 // After plane animation, fade in the links one by one.
-function animateSphereAndMenu() {
+function animateCubeAndMenu() {
     gsap.to(cube.scale, {
         x: 0.5, y: 0.5, z: 0.5,
         duration: 0.5, ease: "power2.out",
@@ -227,7 +214,7 @@ function animateSphereAndMenu() {
 function animate() {
     requestAnimationFrame(animate);
 
-    // Rotate the sphere for a globe-like effect
+    // Rotate the cube for a spinning effect
     cube.rotation.y -= 0.02;
 
     controls.update();
