@@ -22,6 +22,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
+    "cannon": "^0.6.2",
     "gsap": "^3.12.7",
     "three": "^0.174.0"
   }

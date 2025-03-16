@@ -1,7 +1,6 @@
 import * as THREE from "three";
-import { OrbitControls } from "addons";
+import { OrbitControls, GLTFLoader } from "addons"; // Adjust the path as needed
 
-// Scene, Camera, Renderer
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(
     75, window.innerWidth / window.innerHeight, 0.1, 1000
@@ -10,215 +9,127 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-// Utility: Create a texture with text drawn on canvas
-function createTextTexture(text, size = 512, fontSize = 30, bgColor = "blue", txtColor = "white") {
-    const canvas = document.createElement("canvas");
-    // Make the canvas a wide rectangle
-    canvas.width = size;
-    canvas.height = size / 6;
-    const ctx = canvas.getContext("2d");
+// Position the camera closer to the back wall and higher
+camera.position.set(0, 2, 4);
+camera.lookAt(0, 1.5, -5);
 
-    // Draw background
-    ctx.fillStyle = bgColor;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Draw text
-    ctx.fillStyle = txtColor;
-    ctx.font = `bold ${fontSize}px Arial`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(text, canvas.width / 2, canvas.height / 2);
-
-    return new THREE.CanvasTexture(canvas);
-}
-
-// Create a texture for the cube face (with "MENU" text)
-const menuTexture = createTextTexture("MENU", 300, 30, "blue", "white");
-
-// Create six materials for the cube (one for each face)
-const cubeMaterials = [
-    new THREE.MeshStandardMaterial({ map: menuTexture, metalness: 0.5, roughness: 0.3 }),
-    new THREE.MeshStandardMaterial({ map: menuTexture, metalness: 0.5, roughness: 0.3 }),
-    new THREE.MeshStandardMaterial({ map: menuTexture, metalness: 0.5, roughness: 0.3 }),
-    new THREE.MeshStandardMaterial({ map: menuTexture, metalness: 0.5, roughness: 0.3 }),
-    new THREE.MeshStandardMaterial({ map: menuTexture, metalness: 0.5, roughness: 0.3 }),
-    new THREE.MeshStandardMaterial({ map: menuTexture, metalness: 0.5, roughness: 0.3 })
-];
-
-// Create a spinning cube instead of a sphere
-const cubeGeometry = new THREE.BoxGeometry(2, 2, 2);
-const cube = new THREE.Mesh(cubeGeometry, cubeMaterials);
-scene.add(cube);
-
-// Create a plane (menu background) that will later display the links
-const planeMaterial = new THREE.MeshStandardMaterial({
-    color: 0xffffff,
-    side: THREE.DoubleSide
-});
-const planeGeometry = new THREE.PlaneGeometry(3, 3);
-const plane = new THREE.Mesh(planeGeometry, planeMaterial);
-plane.rotation.x = Math.PI / 2; // horizontal
-plane.position.y = -1;
-plane.scale.set(0, 0, 0); // initially hidden
-scene.add(plane);
-
-// --- Create Menu Items (Links) ---
-// These will be stacked vertically on the plane.
-// For each link, we create two textures: normal and hover.
-const menuItems = ["Home", "About", "Contact"];
-const textMeshes = [];
-
-menuItems.forEach((item, index) => {
-    // Create both textures for normal and hover states
-    const normalTexture = createTextTexture(item, 512, 50, "blue", "white");
-    const hoverTexture = createTextTexture(item, 512, 50, "white", "blue");
-
-    // Use a PlaneGeometry for the link.
-    // We set material.transparent = true so we can fade its opacity.
-    const textGeometry = new THREE.PlaneGeometry(2, 0.5);
-    const textMaterial = new THREE.MeshBasicMaterial({
-        map: normalTexture,
-        transparent: true,
-        opacity: 0
-    });
-    const textMesh = new THREE.Mesh(textGeometry, textMaterial);
-
-    // Position the links so they stack vertically on top of the plane.
-    // The plane's top edge is at y = 0.5, so we position the first link there,
-    // then space them downward by 0.5 units.
-    textMesh.position.set(2, 0.05 - index * 0.8, 0.1);
-
-    // Save both textures for later swapping on hover.
-    textMesh.userData = {
-        name: item,
-        normalTexture: normalTexture,
-        hoverTexture: hoverTexture
-    };
-    textMesh.visible = false; // start hidden until animation completes
-    textMeshes.push(textMesh);
-    scene.add(textMesh);
-});
-
-// Lighting
-const pointLight = new THREE.PointLight(0xffffff, 1.5, 100);
-pointLight.position.set(5, 5, 5);
-scene.add(pointLight);
-
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
-scene.add(ambientLight);
-
-const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-directionalLight.position.set(-5, 5, 5);
-scene.add(directionalLight);
-
-// Camera position
-camera.position.set(0, 0, 5);
-
-// OrbitControls
+// === Orbit Controls ===
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
+controls.dampingFactor = 0.05;
 
-// Raycaster and Mouse for interactions
-const raycaster = new THREE.Raycaster();
-const mouse = new THREE.Vector2();
-let isHovering = false;
+// === Lighting ===
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+scene.add(ambientLight);
 
-// Handle window resize
-window.addEventListener("resize", () => {
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
+const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+directionalLight.position.set(5, 10, 7.5);
+scene.add(directionalLight);
+
+// === Room Modeling ===
+// Floor with color #a19a8a
+const floorGeometry = new THREE.PlaneGeometry(10, 10);
+const floorMaterial = new THREE.MeshStandardMaterial({ color: 0xa19a8a });
+const floorMesh = new THREE.Mesh(floorGeometry, floorMaterial);
+floorMesh.rotation.x = -Math.PI / 2;
+scene.add(floorMesh);
+
+// Back wall with color #ebddbc (Taller)
+const backWallGeometry = new THREE.PlaneGeometry(10, 4);
+const backWallMaterial = new THREE.MeshStandardMaterial({ color: 0xebddbc });
+const backWallMesh = new THREE.Mesh(backWallGeometry, backWallMaterial);
+backWallMesh.position.set(0, 2, -5);
+scene.add(backWallMesh);
+
+// Left wall with color #ebddbc
+const leftWallGeometry = new THREE.PlaneGeometry(10, 3);
+const leftWallMaterial = new THREE.MeshStandardMaterial({ color: 0xebddbc });
+const leftWallMesh = new THREE.Mesh(leftWallGeometry, leftWallMaterial);
+leftWallMesh.rotation.y = Math.PI / 2;
+leftWallMesh.position.set(-5, 1.5, 0);
+scene.add(leftWallMesh);
+
+// Right wall with color #ebddbc
+const rightWallGeometry = new THREE.PlaneGeometry(10, 3);
+const rightWallMaterial = new THREE.MeshStandardMaterial({ color: 0xebddbc });
+const rightWallMesh = new THREE.Mesh(rightWallGeometry, rightWallMaterial);
+rightWallMesh.rotation.y = -Math.PI / 2;
+rightWallMesh.position.set(5, 1.5, 0);
+scene.add(rightWallMesh);
+
+// === Load Desk Model ===
+const loader = new GLTFLoader();
+let desk;
+
+loader.load("desk.glb", function (gltf) {
+    desk = gltf.scene;
+    desk.position.set(0, 0, -3); // Adjust position in the room
+    desk.scale.set(1, 1, 1); // Scale to fit properly
+    scene.add(desk);
+}, undefined, function (error) {
+    console.error("Error loading desk model:", error);
 });
 
-// Handle mouse movement for hover effects over links
-window.addEventListener("mousemove", (event) => {
+// === Raycaster for Click Detection ===
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
+function onMouseClick(event) {
+    // Convert mouse position to normalized device coordinates (-1 to +1)
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
+    // Update the raycaster with the camera and mouse position
     raycaster.setFromCamera(mouse, camera);
-    const intersects = raycaster.intersectObjects(textMeshes);
 
-    // For each link, swap texture depending on whether it's hovered.
-    textMeshes.forEach(mesh => {
-        if (intersects.find(inter => inter.object === mesh)) {
-            // Hover state: use hover texture.
-            mesh.material.map = mesh.userData.hoverTexture;
-            document.body.style.cursor = "pointer";
-        } else {
-            // Normal state: revert to normal texture.
-            mesh.material.map = mesh.userData.normalTexture;
-            document.body.style.cursor = "default";
+    // Check for intersections
+    if (desk) {
+        const intersects = raycaster.intersectObject(desk, true);
+        if (intersects.length > 0) {
+            moveCameraToDesk();
         }
-        mesh.material.needsUpdate = true;
-    });
-});
-
-// Handle click events: links and cube
-window.addEventListener("click", () => {
-    raycaster.setFromCamera(mouse, camera);
-
-    // Check for link clicks
-    let linkIntersects = raycaster.intersectObjects(textMeshes);
-    if (linkIntersects.length > 0) {
-        alert(`You clicked: ${linkIntersects[0].object.userData.name}`);
-        return; // Do not continue if a link was clicked.
     }
+}
 
-});
+window.addEventListener("click", onMouseClick, false);
 
-// Handle click events: links and cube
-window.addEventListener("load", () => {
-    animateCubeAndMenu();
-})
+// === Camera Transition to Hover Over Desk ===
+function moveCameraToDesk() {
+    const hoverPosition = new THREE.Vector3(0, 4.5, -3); // Directly above the desk
+    const lookAtPosition = new THREE.Vector3(0, 0, -3); // Look straight down at desk
 
-// Animate cube shrinking and then animate plane to appear.
-// After plane animation, fade in the links one by one.
-function animateCubeAndMenu() {
-    gsap.to(cube.scale, {
-        x: 0.5, y: 0.5, z: 0.5,
-        duration: 0.5, ease: "power2.out",
-        onComplete: () => {
-            gsap.to(plane.scale, {
-                x: 1, y: 1, z: 1,
-                duration: 0.8, ease: "power2.out",
-                onComplete: () => {
-                    gsap.to(plane.rotation, {
-                        x: 0,
-                        duration: 1, ease: "power2.out",
-                        onComplete: () => {
-                            gsap.to(plane.position, {
-                                x: 2,
-                                duration: 1, ease: "power2.out",
-                                onComplete: () => {
-                                    // Fade in the links one by one
-                                    textMeshes.forEach((mesh, i) => {
-                                        mesh.visible = true;
-                                        gsap.to(mesh.material, {
-                                            opacity: 1,
-                                            duration: 0.5,
-                                            delay: i * 0.3,
-                                            ease: "power2.out"
-                                        });
-                                    });
-                                }
-                            });
-                        }
-                    });
-                }
-            });
-        }
+    gsap.to(camera.position, {
+        x: desk.position.x,
+        y: desk.position.y + 3,
+        z: desk.position.z - 2,
+        duration: 1.5,
+        ease: "power2.inOut",
+        onUpdate: function () {
+            camera.lookAt(lookAtPosition);
+        },
     });
 }
 
-// Animation loop
+// === Animation Loop: Sync physics with rendering ===
+const clock = new THREE.Clock();
+
 function animate() {
     requestAnimationFrame(animate);
 
-    // Rotate the cube for a spinning effect
-    cube.rotation.y -= 0.02;
-
+    // Update controls
     controls.update();
+
+    // Render the scene
     renderer.render(scene, camera);
 }
 
 animate();
+
+// === Handle Window Resizing ===
+window.addEventListener('resize', onWindowResize, false);
+
+function onWindowResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+}
