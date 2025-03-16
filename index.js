@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { OrbitControls, GLTFLoader } from "addons"; // Adjust the path as needed
+import { OrbitControls, GLTFLoader } from "addons"; // Adjust path as needed
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(
@@ -27,35 +27,28 @@ directionalLight.position.set(5, 10, 7.5);
 scene.add(directionalLight);
 
 // === Room Modeling ===
-// Floor with color #a19a8a
-const floorGeometry = new THREE.PlaneGeometry(10, 10);
-const floorMaterial = new THREE.MeshStandardMaterial({ color: 0xa19a8a });
-const floorMesh = new THREE.Mesh(floorGeometry, floorMaterial);
-floorMesh.rotation.x = -Math.PI / 2;
-scene.add(floorMesh);
+// Floor
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(10, 6), new THREE.MeshStandardMaterial({ color: 0xa19a8a }));
+floor.rotation.x = -Math.PI / 2;
+floor.position.set(0, 0, -2);
+scene.add(floor);
 
-// Back wall with color #ebddbc (Taller)
-const backWallGeometry = new THREE.PlaneGeometry(10, 4);
-const backWallMaterial = new THREE.MeshStandardMaterial({ color: 0xebddbc });
-const backWallMesh = new THREE.Mesh(backWallGeometry, backWallMaterial);
-backWallMesh.position.set(0, 2, -5);
-scene.add(backWallMesh);
+// Back Wall (Taller)
+const backWall = new THREE.Mesh(new THREE.PlaneGeometry(10, 4), new THREE.MeshStandardMaterial({ color: 0xebddbc }));
+backWall.position.set(0, 2, -5);
+scene.add(backWall);
 
-// Left wall with color #ebddbc
-const leftWallGeometry = new THREE.PlaneGeometry(10, 3);
-const leftWallMaterial = new THREE.MeshStandardMaterial({ color: 0xebddbc });
-const leftWallMesh = new THREE.Mesh(leftWallGeometry, leftWallMaterial);
-leftWallMesh.rotation.y = Math.PI / 2;
-leftWallMesh.position.set(-5, 1.5, 0);
-scene.add(leftWallMesh);
+// Left and Right Walls
+const wallMaterial = new THREE.MeshStandardMaterial({ color: 0xebddbc });
+const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(6, 4), wallMaterial);
+leftWall.rotation.y = Math.PI / 2;
+leftWall.position.set(-5, 2, -2);
+scene.add(leftWall);
 
-// Right wall with color #ebddbc
-const rightWallGeometry = new THREE.PlaneGeometry(10, 3);
-const rightWallMaterial = new THREE.MeshStandardMaterial({ color: 0xebddbc });
-const rightWallMesh = new THREE.Mesh(rightWallGeometry, rightWallMaterial);
-rightWallMesh.rotation.y = -Math.PI / 2;
-rightWallMesh.position.set(5, 1.5, 0);
-scene.add(rightWallMesh);
+const rightWall = new THREE.Mesh(new THREE.PlaneGeometry(6, 4), wallMaterial);
+rightWall.rotation.y = -Math.PI / 2;
+rightWall.position.set(5, 2, -2);
+scene.add(rightWall);
 
 // === Load Desk Model ===
 const loader = new GLTFLoader();
@@ -63,30 +56,32 @@ let desk;
 
 loader.load("desk.glb", function (gltf) {
     desk = gltf.scene;
-    desk.position.set(0, 0, -3); // Adjust position in the room
-    desk.scale.set(1, 1, 1); // Scale to fit properly
+    desk.position.set(0, 0, -3); // Adjust position
+    desk.scale.set(1, 1, 1);
     scene.add(desk);
 }, undefined, function (error) {
     console.error("Error loading desk model:", error);
 });
 
 // === Semi-Transparent Blue Planes ===
-const planeGeometry = new THREE.PlaneGeometry(2, 3); // Width x Height
+const planeGeometry = new THREE.PlaneGeometry(2, 1.5); // Shorter height: 1.5 instead of 3
 const planeMaterial = new THREE.MeshStandardMaterial({
-    color: 0x87CEEB, // Sky blue
+    color: 0x87CEEB,
     transparent: true,
     opacity: 0.6,
+    side: THREE.DoubleSide,
 });
 
+// **Position Fix:** Start slightly **above** the desk (not inside it)
 const leftPlane = new THREE.Mesh(planeGeometry, planeMaterial);
-leftPlane.position.set(-1, 1.5, -3);
+leftPlane.position.set(-1, 1, -3); // Adjust Y position to start just above the desk
 leftPlane.rotation.y = Math.PI / 2;
-leftPlane.scale.set(1, 0, 1); // Start with zero height
+leftPlane.scale.set(1, 0, 1); // Start hidden
 
 const rightPlane = new THREE.Mesh(planeGeometry, planeMaterial);
-rightPlane.position.set(1, 1.5, -3);
+rightPlane.position.set(1, 1, -3); // Adjust Y position
 rightPlane.rotation.y = -Math.PI / 2;
-rightPlane.scale.set(1, 0, 1); // Start with zero height
+rightPlane.scale.set(1, 0, 1); // Start hidden
 
 scene.add(leftPlane);
 scene.add(rightPlane);
@@ -96,14 +91,10 @@ const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 
 function onMouseClick(event) {
-    // Convert mouse position to normalized device coordinates (-1 to +1)
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-    // Update the raycaster with the camera and mouse position
     raycaster.setFromCamera(mouse, camera);
 
-    // Check for intersections
     if (desk) {
         const intersects = raycaster.intersectObject(desk, true);
         if (intersects.length > 0) {
@@ -117,13 +108,12 @@ window.addEventListener("click", onMouseClick, false);
 
 // === Camera Transition to Hover Over Desk ===
 function moveCameraToDesk() {
-    const hoverPosition = new THREE.Vector3(0, 4.5, -3); // Directly above the desk
-    const lookAtPosition = new THREE.Vector3(0, 0, -3); // Look straight down at desk
+    const lookAtPosition = new THREE.Vector3(0, 0, -3);
 
     gsap.to(camera.position, {
         x: desk.position.x,
-        y: desk.position.y + 3,
-        z: desk.position.z - 2,
+        y: desk.position.y + 2,
+        z: desk.position.z - 2.5,
         duration: 1.5,
         ease: "power2.inOut",
         onUpdate: function () {
@@ -132,31 +122,64 @@ function moveCameraToDesk() {
     });
 }
 
-// === Animate Planes Growing Up ===
+// === Animate Planes Growing and Rotating ===
 function growPlanes() {
-    gsap.to(leftPlane.scale, {
+    // **Fix:** Grow planes **upward** to **1.5 height** (not through the desk)
+    gsap.to([leftPlane.scale, rightPlane.scale], {
         y: 1,
         duration: 1.5,
         ease: "power2.inOut",
+        onComplete: rotatePlanes, // Once they finish growing, rotate them
     });
 
-    gsap.to(rightPlane.scale, {
-        y: 1,
+    // **Fix:** Move planes upward slightly as they grow (avoid clipping)
+    gsap.to([leftPlane.position, rightPlane.position], {
+        y: 1.75, // Slightly higher than the desk surface
         duration: 1.5,
         ease: "power2.inOut",
     });
 }
 
-// === Animation Loop: Sync physics with rendering ===
+// === Rotate Planes to Face the Camera ===
+function rotatePlanes() {
+    gsap.to(leftPlane.rotation, {
+        y: 0, // Rotate left plane to face forward
+        duration: 1.5,
+        ease: "power2.inOut",
+    });
+
+    gsap.to(rightPlane.rotation, {
+        y: 0, // Rotate right plane to face forward
+        duration: 1.5,
+        ease: "power2.inOut",
+    });
+}
+
+// ----- Physics Update -----
+function updatePhysics() {
+    const timeStep = 1 / settings.stepFrequency;
+    const now = performance.now() / 1000;
+    if (!lastCallTime) {
+        world.step(timeStep);
+        lastCallTime = now;
+        return;
+    }
+    let timeSinceLastCall = now - lastCallTime;
+    if (resetCallTime) {
+        timeSinceLastCall = 0;
+        resetCallTime = false;
+    }
+    world.step(timeStep, timeSinceLastCall, settings.maxSubSteps);
+    lastCallTime = now;
+}
+
+// === Animation Loop ===
 const clock = new THREE.Clock();
 
 function animate() {
     requestAnimationFrame(animate);
-
-    // Update controls
+    updatePhysics()
     controls.update();
-
-    // Render the scene
     renderer.render(scene, camera);
 }
 
