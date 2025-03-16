@@ -33,16 +33,34 @@ function createTextTexture(text, size = 512, fontSize = 30, bgColor = "blue", tx
 }
 
 // Create the sphere with a text texture ("MENU")
-const sphereTexture = createTextTexture("MENU ");
-const sphereMaterial = new THREE.MeshStandardMaterial({
-    color: 0xc0c0c0,
-    map: sphereTexture,
-    metalness: 0.3,
-    roughness: 0.8
-});
-const sphereGeometry = new THREE.SphereGeometry(2, 32, 32);
-const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-scene.add(sphere);
+// const sphereTexture = createTextTexture("MENU ");
+// const sphereMaterial = new THREE.MeshStandardMaterial({
+//     color: 0xc0c0c0,
+//     map: sphereTexture,
+//     metalness: 0.3,
+//     roughness: 0.8
+// });
+// const sphereGeometry = new THREE.SphereGeometry(2, 32, 32);
+// const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+// scene.add(sphere);
+
+// Create a texture for the cube face (with "MENU" text)
+const menuTexture = createTextTexture("MENU", 300, 30, "blue", "white");
+
+// Create six materials for the cube (one for each face)
+const cubeMaterials = [
+    new THREE.MeshStandardMaterial({ map: menuTexture, metalness: 0.5, roughness: 0.3 }),
+    new THREE.MeshStandardMaterial({ map: menuTexture, metalness: 0.5, roughness: 0.3 }),
+    new THREE.MeshStandardMaterial({ map: menuTexture, metalness: 0.5, roughness: 0.3 }),
+    new THREE.MeshStandardMaterial({ map: menuTexture, metalness: 0.5, roughness: 0.3 }),
+    new THREE.MeshStandardMaterial({ map: menuTexture, metalness: 0.5, roughness: 0.3 }),
+    new THREE.MeshStandardMaterial({ map: menuTexture, metalness: 0.5, roughness: 0.3 })
+];
+
+// Create a spinning cube instead of a sphere
+const cubeGeometry = new THREE.BoxGeometry(2, 2, 2);
+const cube = new THREE.Mesh(cubeGeometry, cubeMaterials);
+scene.add(cube);
 
 // Create a plane (menu background) that will later display the links
 const planeMaterial = new THREE.MeshStandardMaterial({
@@ -160,7 +178,7 @@ window.addEventListener("click", () => {
     }
 
     // Check if sphere is clicked
-    const sphereIntersects = raycaster.intersectObject(sphere);
+    const sphereIntersects = raycaster.intersectObject(cube);
     if (sphereIntersects.length > 0) {
         animateSphereAndMenu();
     }
@@ -169,7 +187,7 @@ window.addEventListener("click", () => {
 // Animate sphere shrinking and then animate plane to appear.
 // After plane animation, fade in the links one by one.
 function animateSphereAndMenu() {
-    gsap.to(sphere.scale, {
+    gsap.to(cube.scale, {
         x: 0.5, y: 0.5, z: 0.5,
         duration: 0.5, ease: "power2.out",
         onComplete: () => {
@@ -210,7 +228,7 @@ function animate() {
     requestAnimationFrame(animate);
 
     // Rotate the sphere for a globe-like effect
-    sphere.rotation.y -= 0.02;
+    cube.rotation.y -= 0.02;
 
     controls.update();
     renderer.render(scene, camera);
