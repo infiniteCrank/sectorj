@@ -70,6 +70,27 @@ loader.load("desk.glb", function (gltf) {
     console.error("Error loading desk model:", error);
 });
 
+// === Semi-Transparent Blue Planes ===
+const planeGeometry = new THREE.PlaneGeometry(2, 3); // Width x Height
+const planeMaterial = new THREE.MeshStandardMaterial({
+    color: 0x87CEEB, // Sky blue
+    transparent: true,
+    opacity: 0.6,
+});
+
+const leftPlane = new THREE.Mesh(planeGeometry, planeMaterial);
+leftPlane.position.set(-1, 1.5, -3);
+leftPlane.rotation.y = Math.PI / 2;
+leftPlane.scale.set(1, 0, 1); // Start with zero height
+
+const rightPlane = new THREE.Mesh(planeGeometry, planeMaterial);
+rightPlane.position.set(1, 1.5, -3);
+rightPlane.rotation.y = -Math.PI / 2;
+rightPlane.scale.set(1, 0, 1); // Start with zero height
+
+scene.add(leftPlane);
+scene.add(rightPlane);
+
 // === Raycaster for Click Detection ===
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
@@ -87,6 +108,7 @@ function onMouseClick(event) {
         const intersects = raycaster.intersectObject(desk, true);
         if (intersects.length > 0) {
             moveCameraToDesk();
+            growPlanes();
         }
     }
 }
@@ -107,6 +129,21 @@ function moveCameraToDesk() {
         onUpdate: function () {
             camera.lookAt(lookAtPosition);
         },
+    });
+}
+
+// === Animate Planes Growing Up ===
+function growPlanes() {
+    gsap.to(leftPlane.scale, {
+        y: 1,
+        duration: 1.5,
+        ease: "power2.inOut",
+    });
+
+    gsap.to(rightPlane.scale, {
+        y: 1,
+        duration: 1.5,
+        ease: "power2.inOut",
     });
 }
 
