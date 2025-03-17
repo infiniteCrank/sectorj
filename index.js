@@ -9,6 +9,11 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
+// ----- Physics World -----
+const world = new CANNON.World();
+world.gravity.set(0, -9.82, 0);
+
+
 // Position the camera closer to the back wall and higher
 camera.position.set(0, 2, 4);
 camera.lookAt(0, 1.5, -5);
@@ -102,9 +107,23 @@ function onMouseClick(event) {
             growPlanes();
         }
     }
-}
 
+    if (rightWallPicture) {
+        // Check if the right wall picture was clicked
+        const intersectMe = raycaster.intersectObject(rightWallPicture);
+        if (intersectMe.length > 0) {
+            showCube();
+        }
+    }
+
+}
 window.addEventListener("click", onMouseClick, false);
+
+function showCube() {
+    console.log("I got here")
+    cube.visible = true;
+    gsap.to(cube.scale, { x: 1, y: 1, z: 1, duration: 1.5, ease: "power2.out" });
+}
 
 // === Camera Transition to Hover Over Desk ===
 function moveCameraToDesk() {
@@ -155,6 +174,45 @@ function rotatePlanes() {
     });
 }
 
+// === Picture Frames on Walls ===
+const textureLoader = new THREE.TextureLoader();
+
+function createPictureFrame(imagePath, position, rotation) {
+    const frameGeometry = new THREE.PlaneGeometry(2, 1.5); // Picture frame size
+    const frameTexture = textureLoader.load(imagePath); // Load image
+    const frameMaterial = new THREE.MeshBasicMaterial({ map: frameTexture });
+
+    const pictureFrame = new THREE.Mesh(frameGeometry, frameMaterial);
+    pictureFrame.position.set(position.x, position.y, position.z);
+    pictureFrame.rotation.y = rotation;
+    scene.add(pictureFrame);
+    return pictureFrame
+}
+
+// Add Picture Frames
+let rightWallPicture = createPictureFrame("me.jpg", { x: -4.9, y: 2, z: -1 }, Math.PI / 2); // Left Wall
+let letfWallPicture = createPictureFrame("art.jpg", { x: 4.9, y: 2, z: -1 }, -Math.PI / 2); // Right Wall
+
+const cubeMaterials = [
+    new THREE.MeshBasicMaterial({ map: textureLoader.load("me.jpg") }), // Right side
+    new THREE.MeshBasicMaterial({ map: textureLoader.load("me.jpg") }), // Left side
+    new THREE.MeshBasicMaterial({ map: textureLoader.load("me.jpg") }), // Top
+    new THREE.MeshBasicMaterial({ map: textureLoader.load("art.jpg") }), // Bottom
+    new THREE.MeshBasicMaterial({ map: textureLoader.load("art.jpg") }), // Front
+    new THREE.MeshBasicMaterial({ map: textureLoader.load("art.jpg") })  // Back
+];
+const cubeGeometry = new THREE.BoxGeometry(0.1, 0.1, 0.1); // Start small
+const cube = new THREE.Mesh(cubeGeometry, cubeMaterials);
+cube.position.set(0, 3.5, -3); // Above desk, between blue planes
+cube.visible = false; // Initially hidden
+scene.add(cube);
+
+const settings = {
+    stepFrequency: 60,
+    maxSubSteps: 3
+};
+let lastCallTime = null;
+let resetCallTime = false;
 // ----- Physics Update -----
 function updatePhysics() {
     const timeStep = 1 / settings.stepFrequency;
