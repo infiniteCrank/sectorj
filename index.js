@@ -57,13 +57,15 @@ scene.add(rightWall);
 
 // === Load Desk Model ===
 const loader = new GLTFLoader();
-let desk;
+let desk, gameSystem;
 
 loader.load("desk.glb", function (gltf) {
     desk = gltf.scene;
     desk.position.set(0, 0, -3); // Adjust position
     desk.scale.set(1, 1, 1);
     scene.add(desk);
+    // After desk loads, load the game system
+    loadGameSystem();
 }, undefined, function (error) {
     console.error("Error loading desk model:", error);
 });
@@ -206,6 +208,19 @@ const cube = new THREE.Mesh(cubeGeometry, cubeMaterials);
 cube.position.set(0, 3.5, -3); // Above desk, between blue planes
 cube.visible = false; // Initially hidden
 scene.add(cube);
+
+// === Load Game System Model ===
+function loadGameSystem() {
+    loader.load("game_system.glb", function (gltf) {
+        gameSystem = gltf.scene;
+        gameSystem.position.set(0, 0, -3.3); // Position on top of the desk
+        gameSystem.scale.set(1, 1, 1); // Adjust scale if needed
+        gameSystem.rotation.y = 3.5
+        scene.add(gameSystem);
+    }, undefined, function (error) {
+        console.error("Error loading game system model:", error);
+    });
+}
 
 const settings = {
     stepFrequency: 60,
