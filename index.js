@@ -55,6 +55,18 @@ rightWall.rotation.y = -Math.PI / 2;
 rightWall.position.set(5, 2, -2);
 scene.add(rightWall);
 
+// === Night Sky Sphere ===
+const skyTexture = new THREE.TextureLoader().load("nova_sky.png"); // Load night sky texture
+skyTexture.wrapS = THREE.RepeatWrapping; // Ensure texture wraps
+skyTexture.wrapT = THREE.RepeatWrapping;
+skyTexture.rotation = Math.PI; // Rotate the texture 180 degrees
+const skyMaterial = new THREE.MeshBasicMaterial({ map: skyTexture, side: THREE.BackSide }); // Inside-facing material
+const skyGeometry = new THREE.SphereGeometry(50, 64, 64); // Large sphere to surround the room
+const skySphere = new THREE.Mesh(skyGeometry, skyMaterial);
+// Rotate the sky sphere upside down so the seam is on top
+skySphere.rotation.y = Math.PI;
+scene.add(skySphere);
+
 // === Load Desk Model ===
 const loader = new GLTFLoader();
 let desk, gameSystem;
@@ -252,6 +264,10 @@ const clock = new THREE.Clock();
 function animate() {
     requestAnimationFrame(animate);
     updatePhysics()
+
+    if (skySphere) {
+        skySphere.rotation.y += 0.0005; // Adjust speed as needed
+    }
     controls.update();
     renderer.render(scene, camera);
 }
