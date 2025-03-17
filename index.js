@@ -84,6 +84,7 @@ loader.load("desk.glb", function (gltf) {
     loadGameSystem();
     loadTrashCan();
     loadRobot();
+    loadBook();
 }, undefined, function (error) {
     console.error("Error loading desk model:", error);
 });
@@ -378,6 +379,24 @@ function loadTrashCan() {
     });
 }
 
+function loadBook() {
+    // --- Load Trash Can Model and Place It Next to the Desk ---
+    loader.load("book.glb", function (gltf) {
+        const book = gltf.scene;
+        book.position.set(0, .65, -3.5);
+        // Adjust the scale if needed
+        book.scale.set(.5, .5, .5);
+        book.rotation.y = Math.PI
+        scene.add(book);
+        const fountainBook = createFountainEffect(book, { width: 1, height: 0.5, particleCount: 50, resetOffset: 0.5 });
+        // Offset the fountain to the top center of the console.
+        fountainBook.fountainParticles.position.set(0, 2, 0);
+        interactiveFountains.push({ object: book, fountain: fountainBook });
+    }, undefined, function (error) {
+        console.error("Error loading book mesh:", error);
+    });
+}
+
 function loadRobot() {
     // --- Load Trash Can Model and Place It Next to the Desk ---
     loader.load("two_wheel_robot.glb", function (gltf) {
@@ -395,7 +414,7 @@ function loadRobot() {
         fountainRobot.fountainParticles.position.set(0, 2, 0);
         interactiveFountains.push({ object: robot, fountain: fountainRobot });
     }, undefined, function (error) {
-        console.error("Error loading trash can mesh:", error);
+        console.error("Error loading robot mesh:", error);
     });
 }
 
