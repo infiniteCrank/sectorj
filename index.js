@@ -44,7 +44,11 @@ backWall.position.set(0, 2, -5);
 scene.add(backWall);
 
 // Left and Right Walls
-const wallMaterial = new THREE.MeshStandardMaterial({ color: 0xebddbc });
+const wallMaterial = new THREE.MeshStandardMaterial({
+    color: 0xebddbc,
+    transparent: true,
+    opacity: 0.3, // Adjust for desired transparency (0 = fully transparent, 1 = fully solid)
+});
 const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(6, 4), wallMaterial);
 leftWall.rotation.y = Math.PI / 2;
 leftWall.position.set(-5, 2, -2);
@@ -132,6 +136,14 @@ function onMouseClick(event) {
 
 }
 window.addEventListener("click", onMouseClick, false);
+
+window.addEventListener("load", () => {
+    setTimeout(function () {
+        moveCameraToDesk();
+        growPlanes();
+
+    }, 200); // 2000 milliseconds = 2 seconds
+}, false);
 
 function showCube() {
     console.log("I got here")
