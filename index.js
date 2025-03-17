@@ -352,7 +352,7 @@ function loadGameSystem() {
         // We assume the console has a smaller top surface; adjust parameters as needed.
         const fountainConsole = createFountainEffect(gameSystem, { width: 1, height: 0.5, particleCount: 50, resetOffset: 0.5 });
         // Offset the fountain to the top center of the console.
-        fountainConsole.fountainParticles.position.set(0, 0.3, 0);
+        fountainConsole.fountainParticles.position.set(0, 1, 0);
         interactiveFountains.push({ object: gameSystem, fountain: fountainConsole });
     }, undefined, function (error) {
         console.error("Error loading game system model:", error);
