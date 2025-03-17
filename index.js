@@ -82,6 +82,8 @@ loader.load("desk.glb", function (gltf) {
     scene.add(desk);
     // After desk loads, load the game system
     loadGameSystem();
+    loadTrashCan();
+    loadRobot();
 }, undefined, function (error) {
     console.error("Error loading desk model:", error);
 });
@@ -112,11 +114,13 @@ scene.add(rightPlane);
 // === Raycaster for Click Detection ===
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
-let fountainActive = false;
 
 function onMouseMove(event) {
+
+    // Calculate normalized device coordinates
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
     raycaster.setFromCamera(mouse, camera);
 
     // Check hover for each interactive fountain
@@ -162,11 +166,10 @@ window.addEventListener("load", () => {
         moveCameraToDesk();
         growPlanes();
 
-    }, 200); // 2000 milliseconds = 2 seconds
+    }, 200);
 }, false);
 
 function showCube() {
-    console.log("I got here")
     cube.visible = true;
     gsap.to(cube.scale, { x: 1, y: 1, z: 1, duration: 1.5, ease: "power2.out" });
 }
@@ -325,7 +328,6 @@ interactiveFountains.push({ object: rightWallPicture, fountain: fountainRight })
 const fountainLeft = createFountainEffect(leftWallPicture, { width: 2, height: 1.5, particleCount: 100, resetOffset: 1.0 });
 interactiveFountains.push({ object: leftWallPicture, fountain: fountainLeft });
 
-
 const cubeMaterials = [
     new THREE.MeshBasicMaterial({ map: textureLoader.load("me.jpg") }), // Right side
     new THREE.MeshBasicMaterial({ map: textureLoader.load("me.jpg") }), // Left side
@@ -334,9 +336,9 @@ const cubeMaterials = [
     new THREE.MeshBasicMaterial({ map: textureLoader.load("art.jpg") }), // Front
     new THREE.MeshBasicMaterial({ map: textureLoader.load("art.jpg") })  // Back
 ];
-const cubeGeometry = new THREE.BoxGeometry(0.1, 0.1, 0.1); // Start small
+const cubeGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5); // Start small
 const cube = new THREE.Mesh(cubeGeometry, cubeMaterials);
-cube.position.set(0, 3.5, -3); // Above desk, between blue planes
+cube.position.set(0, 2, -3); // Above desk, between blue planes
 cube.visible = false; // Initially hidden
 scene.add(cube);
 
@@ -344,9 +346,9 @@ scene.add(cube);
 function loadGameSystem() {
     loader.load("game_system.glb", function (gltf) {
         gameSystem = gltf.scene;
-        gameSystem.position.set(0, 0, -3.3); // Position on top of the desk
+        gameSystem.position.set(-1, 0, -3.3); // Position on top of the desk
         gameSystem.scale.set(1, 1, 1); // Adjust scale if needed
-        gameSystem.rotation.y = 3.5
+        gameSystem.rotation.y = Math.PI
         scene.add(gameSystem);
         // Create a fountain effect for the game system.
         // We assume the console has a smaller top surface; adjust parameters as needed.
@@ -359,13 +361,51 @@ function loadGameSystem() {
     });
 }
 
+function loadTrashCan() {
+    // --- Load Trash Can Model and Place It Next to the Desk ---
+    loader.load("trashcan.glb", function (gltf) {
+        const trashCan = gltf.scene;
+        trashCan.position.set(-2.5, -.5, -3);
+        // Adjust the scale if needed
+        trashCan.scale.set(.5, .5, .5);
+        scene.add(trashCan);
+        const fountainTrash = createFountainEffect(trashCan, { width: 1, height: 0.5, particleCount: 50, resetOffset: 0.5 });
+        // Offset the fountain to the top center of the console.
+        fountainTrash.fountainParticles.position.set(0, 2, 0);
+        interactiveFountains.push({ object: trashCan, fountain: fountainTrash });
+    }, undefined, function (error) {
+        console.error("Error loading trash can mesh:", error);
+    });
+}
+
+function loadRobot() {
+    // --- Load Trash Can Model and Place It Next to the Desk ---
+    loader.load("two_wheel_robot.glb", function (gltf) {
+        const robot = gltf.scene;
+        // Position the trash can next to the desk.
+        // For example, if your desk is at (0, 0, -3), placing the trash can at (1.5, 0, -3)
+        // puts it to the right of the desk.
+        robot.position.set(3, .5, -3);
+        robot.rotation.y = Math.PI
+        // Adjust the scale if needed
+        robot.scale.set(.2, .2, .2);
+        scene.add(robot);
+        const fountainRobot = createFountainEffect(robot, { width: 1, height: 0.5, particleCount: 50, resetOffset: 0.5 });
+        // Offset the fountain to the top center of the console.
+        fountainRobot.fountainParticles.position.set(0, 2, 0);
+        interactiveFountains.push({ object: robot, fountain: fountainRobot });
+    }, undefined, function (error) {
+        console.error("Error loading trash can mesh:", error);
+    });
+}
+
+// ----- Physics Update -----
 const settings = {
     stepFrequency: 60,
     maxSubSteps: 3
 };
 let lastCallTime = null;
 let resetCallTime = false;
-// ----- Physics Update -----
 function updatePhysics() {
     const timeStep = 1 / settings.stepFrequency;
     const now = performance.now() / 1000;
@@ -393,6 +433,10 @@ function animate() {
 
     if (skySphere) {
         skySphere.rotation.y += 0.0005; // Adjust speed as needed
+    }
+
+    if (cube) {
+        cube.rotation.y += 0.02; // Adjust speed as needed
     }
 
     // Update each active fountain effect
