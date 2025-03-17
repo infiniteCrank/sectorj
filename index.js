@@ -112,6 +112,26 @@ scene.add(rightPlane);
 // === Raycaster for Click Detection ===
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
+let fountainActive = false;
+
+function onMouseMove(event) {
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    raycaster.setFromCamera(mouse, camera);
+
+    // Check hover for each interactive fountain
+    interactiveFountains.forEach(item => {
+        const intersects = raycaster.intersectObject(item.object, true);
+        if (intersects.length > 0) {
+            item.fountain.active = true;
+            item.fountain.fountainParticles.visible = true;
+        } else {
+            item.fountain.active = false;
+            item.fountain.fountainParticles.visible = false;
+        }
+    });
+}
+window.addEventListener("mousemove", onMouseMove, false);
 
 function onMouseClick(event) {
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
@@ -216,8 +236,95 @@ function createPictureFrame(imagePath, position, rotation) {
 }
 
 // Add Picture Frames
-let rightWallPicture = createPictureFrame("me.jpg", { x: -4.9, y: 2, z: -1 }, Math.PI / 2); // Left Wall
-let letfWallPicture = createPictureFrame("art.jpg", { x: 4.9, y: 2, z: -1 }, -Math.PI / 2); // Right Wall
+let rightWallPicture = createPictureFrame("me.jpg", { x: -4.9, y: 2, z: -1 }, Math.PI / 2);
+let leftWallPicture = createPictureFrame("art.jpg", { x: 4.9, y: 2, z: -1 }, -Math.PI / 2);
+
+// === HELPER: Create a Particle Fountain Effect for an Interactive Object ===
+function createFountainEffect(parentObject, options = {}) {
+    const particleCount = options.particleCount || 100;
+    const areaWidth = options.width || 2;
+    const areaHeight = options.height || 1.5;
+    const resetOffset = options.resetOffset || 1.0; // How far above the frame particles rise before reset
+
+    const fountainGeometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(particleCount * 3);
+    const velocities = new Array(particleCount);
+
+    // Reset particle position to a random point along one of the frame edges
+    function resetParticle(i) {
+        const edge = Math.floor(Math.random() * 4); // 0: top, 1: bottom, 2: left, 3: right
+        let x, y;
+        if (edge === 0) {         // top edge (y = +areaHeight/2)
+            x = (Math.random() - 0.5) * areaWidth;
+            y = areaHeight / 2;
+        } else if (edge === 1) {  // bottom edge (y = -areaHeight/2)
+            x = (Math.random() - 0.5) * areaWidth;
+            y = -areaHeight / 2;
+        } else if (edge === 2) {  // left edge (x = -areaWidth/2)
+            x = -areaWidth / 2;
+            y = (Math.random() - 0.5) * areaHeight;
+        } else {                  // right edge (x = +areaWidth/2)
+            x = areaWidth / 2;
+            y = (Math.random() - 0.5) * areaHeight;
+        }
+        positions[i * 3] = x;
+        positions[i * 3 + 1] = y;
+        positions[i * 3 + 2] = 0; // particles start in the plane of the frame
+        // Give each particle an upward velocity with slight horizontal variation.
+        velocities[i] = new THREE.Vector3((Math.random() - 0.5) * 0.1, 0.3 + Math.random() * 0.2, 0);
+    }
+
+    for (let i = 0; i < particleCount; i++) {
+        resetParticle(i);
+    }
+
+    fountainGeometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    const fountainMaterial = new THREE.PointsMaterial({
+        color: 0xffffff,
+        size: 0.05,
+        transparent: true,
+        opacity: 0.8,
+    });
+    const fountainParticles = new THREE.Points(fountainGeometry, fountainMaterial);
+    fountainParticles.visible = false; // Start hidden
+    // Attach fountainParticles to the parent object's local space.
+    parentObject.add(fountainParticles);
+
+    return {
+        fountainParticles,
+        fountainGeometry,
+        velocities,
+        particleCount,
+        active: false,
+        options: { width: areaWidth, height: areaHeight, resetOffset },
+        resetParticle, // Expose the function for use in update
+        update: function (delta) {
+            const posAttr = this.fountainGeometry.attributes.position.array;
+            for (let i = 0; i < this.particleCount; i++) {
+                posAttr[i * 3] += this.velocities[i].x * delta;
+                posAttr[i * 3 + 1] += this.velocities[i].y * delta;
+                posAttr[i * 3 + 2] += this.velocities[i].z * delta;
+                // Reset particle if it rises beyond (areaHeight/2 + resetOffset)
+                if (posAttr[i * 3 + 1] > (this.options.height / 2 + this.options.resetOffset)) {
+                    this.resetParticle(i);
+                }
+            }
+            this.fountainGeometry.attributes.position.needsUpdate = true;
+        }
+    };
+}
+
+// === Set Up Interactive Fountain Effects ===
+const interactiveFountains = [];
+
+// Fountain for right wall picture frame
+const fountainRight = createFountainEffect(rightWallPicture, { width: 2, height: 1.5, particleCount: 100, resetOffset: 1.0 });
+interactiveFountains.push({ object: rightWallPicture, fountain: fountainRight });
+
+// Fountain for left wall picture frame
+const fountainLeft = createFountainEffect(leftWallPicture, { width: 2, height: 1.5, particleCount: 100, resetOffset: 1.0 });
+interactiveFountains.push({ object: leftWallPicture, fountain: fountainLeft });
+
 
 const cubeMaterials = [
     new THREE.MeshBasicMaterial({ map: textureLoader.load("me.jpg") }), // Right side
@@ -241,6 +348,12 @@ function loadGameSystem() {
         gameSystem.scale.set(1, 1, 1); // Adjust scale if needed
         gameSystem.rotation.y = 3.5
         scene.add(gameSystem);
+        // Create a fountain effect for the game system.
+        // We assume the console has a smaller top surface; adjust parameters as needed.
+        const fountainConsole = createFountainEffect(gameSystem, { width: 1, height: 0.5, particleCount: 50, resetOffset: 0.5 });
+        // Offset the fountain to the top center of the console.
+        fountainConsole.fountainParticles.position.set(0, 0.3, 0);
+        interactiveFountains.push({ object: gameSystem, fountain: fountainConsole });
     }, undefined, function (error) {
         console.error("Error loading game system model:", error);
     });
@@ -276,10 +389,19 @@ const clock = new THREE.Clock();
 function animate() {
     requestAnimationFrame(animate);
     updatePhysics()
+    const delta = clock.getDelta();
 
     if (skySphere) {
         skySphere.rotation.y += 0.0005; // Adjust speed as needed
     }
+
+    // Update each active fountain effect
+    interactiveFountains.forEach(item => {
+        if (item.fountain.active) {
+            item.fountain.update(delta);
+        }
+    });
+
     controls.update();
     renderer.render(scene, camera);
 }
